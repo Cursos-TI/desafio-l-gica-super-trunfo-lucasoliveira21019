@@ -13,9 +13,12 @@ int main() {
     Territorio territorios[5];
 
     // Entrada de dados para os 5 territórios
-    printf("Cadastro de Territórios:\n");
+    printf("==============================\n");
+    printf("vamos cadastrar nossos 5 territorios iniciais\n");
+    printf("Cadastro de Territórios\n");
+    printf("==============================\n");
     for (int i = 0; i < 5; i++) {
-        printf("\nTerritório %d:\n", i + 1);
+        printf("---\nCadastrando Território %d---\n", i + 1);
 
         printf("Nome: ");
         // Usando fgets para evitar problemas com espaços no nome
