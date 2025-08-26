@@ -3,168 +3,245 @@
 #include <string.h>
 #include <time.h>
 
-// Definição da struct Territorio
+// Definição da estrutura Regiao
 typedef struct {
-    char nome[30];
-    char cor[10];
-    int tropas;
-} Territorio;
+    char ident[30];         // Identificador da região
+    char grupo[10];          // Grupo dominante (cor do exército)
+    int efetivo;            // Número de soldados
+} Regiao;
 
 // Protótipos das funções
-Territorio* cadastrarTerritorios(int numTerritorios);
-void exibirTerritorios(Territorio* territorios, int numTerritorios);
-void atacar(Territorio* atacante, Territorio* defensor);
-void liberarMemoria(Territorio* mapa);
+Regiao* criar_regioes(int num_regioes);
+void exibir_mapa(Regiao* regioes, int num_regioes);
+void confrontar(Regiao* atacante, Regiao* defensor);
+void desalocar_memoria(Regiao* mapa, char* plano_jogador); // Alterado o nome
+void definir_plano(char* destino, char* planos[], int total_planos); // Alterado o nome
+int verificar_objetivo(char* plano, Regiao* mapa, int extensao); // Alterado o nome
 
 int main() {
-    int numTerritorios;
-    Territorio* territorios;
+    int num_regioes;
+    Regiao* regioes;
+    char* plano_jogador;       // Plano estratégico do jogador
+    char* planos[] = {       // Vetor de planos estratégicos
+        "Dominar 4 regioes consecutivas.",
+        "Aniquilar todas as forcas do grupo verde.",
+        "Acumular mais de 25 soldados em uma regiao.",
+        "Conquistar 6 regioes distintas.",
+        "Controlar um ponto chave por 4 rodadas."
+    };
+    int total_planos = sizeof(planos) / sizeof(planos[0]);
 
-    // Inicializa o gerador de números aleatórios
+    // Inicializa o gerador de aleatoriedade
     srand(time(NULL));
 
-    // Solicita ao usuário o número de territórios
-    printf("Digite o número de territórios: ");
-    scanf("%d", &numTerritorios);
-    getchar(); // Consome o '\n' deixado pelo scanf
+    // Solicita ao usuário a quantidade de regiões
+    printf("Informe a quantidade de regioes: ");
+    scanf("%d", &num_regioes);
+    getchar(); // Limpa o buffer
 
-    // Aloca dinamicamente o vetor de territórios
-    territorios = cadastrarTerritorios(numTerritorios);
+    // Aloca espaço para o mapa
+    regioes = criar_regioes(num_regioes);
 
-    // Loop principal do jogo
+    // Aloca espaço para o plano do jogador
+    plano_jogador = (char*)malloc(100 * sizeof(char));
+    if (plano_jogador == NULL) {
+        printf("Erro ao alocar memoria para o plano.\n");
+        desalocar_memoria(regioes, NULL);
+        exit(1);
+    }
+
+    // Define o plano do jogador
+    definir_plano(plano_jogador, planos, total_planos);
+    printf("\nSeu plano: %s\n", plano_jogador);
+
+    // Loop principal
     int escolha;
     do {
-        printf("\n--- Menu ---\n");
-        printf("1 - Exibir territórios\n");
-        printf("2 - Atacar\n");
-        printf("0 - Sair\n");
+        printf("\n--- Menu Principal ---\n");
+        printf("1 - Visualizar Mapa\n");
+        printf("2 - Iniciar Conflito\n");
+        printf("0 - Encerrar Jogo\n");
         printf("Escolha: ");
         scanf("%d", &escolha);
-        getchar(); // Consome o '\n' deixado pelo scanf
+        getchar(); // Limpa o buffer
 
         switch (escolha) {
             case 1:
-                exibirTerritorios(territorios, numTerritorios);
+                exibir_mapa(regioes, num_regioes);
                 break;
             case 2: {
-                int atacante_idx, defensor_idx;
+                int atk_idx, def_idx;
 
-                printf("Escolha o território atacante (0 a %d): ", numTerritorios - 1);
-                scanf("%d", &atacante_idx);
+                printf("Regiao atacante (0 a %d): ", num_regioes - 1);
+                scanf("%d", &atk_idx);
                 getchar();
 
-                printf("Escolha o território defensor (0 a %d): ", numTerritorios - 1);
-                scanf("%d", &defensor_idx);
+                printf("Regiao defensora (0 a %d): ", num_regioes - 1);
+                scanf("%d", &def_idx);
                 getchar();
 
                 // Validação das escolhas
-                if (atacante_idx < 0 || atacante_idx >= numTerritorios || defensor_idx < 0 || defensor_idx >= numTerritorios) {
-                    printf("Índices inválidos.\n");
+                if (atk_idx < 0 || atk_idx >= num_regioes || def_idx < 0 || def_idx >= num_regioes) {
+                    printf("Indices invalidos.\n");
                     break;
                 }
 
-                if (strcmp(territorios[atacante_idx].cor, territorios[defensor_idx].cor) == 0) {
-                    printf("Não é possível atacar um território da mesma cor.\n");
+                if (strcmp(regioes[atk_idx].grupo, regioes[def_idx].grupo) == 0) {
+                    printf("Nao e possivel atacar uma regiao do mesmo grupo.\n");
                     break;
                 }
-                
-                atacar(&territorios[atacante_idx], &territorios[defensor_idx]);
-                exibirTerritorios(territorios, numTerritorios); // Exibe após o ataque
+
+                confrontar(&regioes[atk_idx], &regioes[def_idx]);
+                exibir_mapa(regioes, num_regioes);
+
+                // Verifica se o objetivo foi alcancado
+                if (verificar_objetivo(plano_jogador, regioes, num_regioes)) {
+                    printf("\nParabens! Seu plano foi concretizado! Vitoria!\n");
+                    escolha = 0;
+                }
 
                 break;
             }
             case 0:
-                printf("Saindo do jogo.\n");
+                printf("Finalizando o jogo.\n");
                 break;
             default:
-                printf("Opção inválida.\n");
+                printf("Opcao invalida.\n");
         }
     } while (escolha != 0);
 
-    // Libera a memória alocada
-    liberarMemoria(territorios);
+    // Libera a memória
+    desalocar_memoria(regioes, plano_jogador);
 
     return 0;
 }
 
-// Função para cadastrar os territórios
-Territorio* cadastrarTerritorios(int numTerritorios) {
-    Territorio* territorios = (Territorio*)calloc(numTerritorios, sizeof(Territorio));
+// Função para criar as regiões
+Regiao* criar_regioes(int num_regioes) {
+    Regiao* regioes = (Regiao*)calloc(num_regioes, sizeof(Regiao));
 
-    if (territorios == NULL) {
-        printf("Erro ao alocar memória para os territórios.\n");
-        exit(1); // Encerra o programa em caso de falha na alocação
+    if (regioes == NULL) {
+        printf("Erro ao alocar memoria para as regioes.\n");
+        exit(1);
     }
 
     printf("==============================\n");
-    printf("Cadastro de Territórios\n");
+    printf("Cadastro de Regioes\n");
     printf("==============================\n");
-    for (int i = 0; i < numTerritorios; i++) {
-        printf("---\nCadastrando Território %d---\n", i + 1);
+    for (int i = 0; i < num_regioes; i++) {
+        printf("---\nRegiao %d---\n", i + 1);
 
         printf("Nome: ");
-        fgets(territorios[i].nome, sizeof(territorios[i].nome), stdin);
-        territorios[i].nome[strcspn(territorios[i].nome, "\n")] = 0;
+        fgets(regioes[i].ident, sizeof(regioes[i].ident), stdin);
+        regioes[i].ident[strcspn(regioes[i].ident, "\n")] = 0;
 
-        printf("Cor do Exército: ");
-        scanf("%s", territorios[i].cor);
-        getchar(); // Consume o '\n' deixado pelo scanf
+        printf("Grupo: ");
+        scanf("%s", regioes[i].grupo);
+        getchar(); // Limpa o buffer
 
-        printf("Quantidade de Tropas: ");
-        scanf("%d", &territorios[i].tropas);
-        getchar(); // Consume o '\n' deixado pelo scanf
+        printf("Efetivo: ");
+        scanf("%d", &regioes[i].efetivo);
+        getchar(); // Limpa o buffer
     }
 
-    return territorios;
+    return regioes;
 }
 
-// Função para exibir os dados dos territórios
-void exibirTerritorios(Territorio* territorios, int numTerritorios) {
-    printf("\n--- Dados dos Territórios Cadastrados --- \n");
-    for (int i = 0; i < numTerritorios; i++) {
-        printf("\nTerritório %d:\n", i + 1);
-        printf("Nome: %s\n", territorios[i].nome);
-        printf("Cor do Exército: %s\n", territorios[i].cor);
-        printf("Quantidade de Tropas: %d\n", territorios[i].tropas);
+// Função para exibir as regiões
+void exibir_mapa(Regiao* regioes, int num_regioes) {
+    printf("\n--- Situacao Atual do Mapa ---\n");
+    for (int i = 0; i < num_regioes; i++) {
+        printf("\nRegiao %d:\n", i + 1);
+        printf("Nome: %s\n", regioes[i].ident);
+        printf("Grupo: %s\n", regioes[i].grupo);
+        printf("Efetivo: %d\n", regioes[i].efetivo);
     }
 }
 
-// Função para simular um ataque entre dois territórios
-void atacar(Territorio* atacante, Territorio* defensor) {
-    printf("\n--- Simulação de Ataque ---\n");
-    printf("Atacante: %s (%s, %d tropas)\n", atacante->nome, atacante->cor, atacante->tropas);
-    printf("Defensor: %s (%s, %d tropas)\n", defensor->nome, defensor->cor, defensor->tropas);
+// Função para simular um conflito
+void confrontar(Regiao* atacante, Regiao* defensor) {
+    printf("\n--- Simulação de Conflito ---\n");
+    printf("Atacante: %s (%s, %d)\n", atacante->ident, atacante->grupo, atacante->efetivo);
+    printf("Defensor: %s (%s, %d)\n", defensor->ident, defensor->grupo, defensor->efetivo);
 
-    // Simulação da batalha com dados aleatórios
-    int ataque = (rand() % 6) + 1; // Gera um número aleatório entre 1 e 6
-    int defesa = (rand() % 6) + 1; // Gera um número aleatório entre 1 e 6
+    // Simula o combate
+    int ataque = (rand() % 6) + 1;
+    int defesa = (rand() % 6) + 1;
 
-    printf("Resultado do ataque: %d\n", ataque);
-    printf("Resultado da defesa: %d\n", defesa);
+    printf("Ataque: %d\n", ataque);
+    printf("Defesa: %d\n", defesa);
 
     if (ataque > defesa) {
-        printf("O atacante venceu!\n");
+        printf("Atacante prevaleceu!\n");
 
-        // Atualiza os dados do defensor
-        strcpy(defensor->cor, atacante->cor); // Transfere a cor
-        defensor->tropas = atacante->tropas / 2;  // Transfere metade das tropas (inteiro)
-        atacante->tropas /= 2; // Atacante perde metade das tropas que mandou para o ataque.
+        // Atualiza
+        strcpy(defensor->grupo, atacante->grupo);
+        defensor->efetivo = atacante->efetivo / 2;
+        atacante->efetivo /= 2;
     } else {
-        printf("O defensor venceu!\n");
-        atacante->tropas--;  // Atacante perde uma tropa
+        printf("Defensor resistiu!\n");
+        atacante->efetivo--;
 
-        if(atacante->tropas < 0){
-            atacante->tropas = 0;
+        if(atacante->efetivo < 0){
+            atacante->efetivo = 0;
         }
     }
 
-    printf("--- Resultados do Ataque ---\n");
-    printf("Atacante: %s (%s, %d tropas)\n", atacante->nome, atacante->cor, atacante->tropas);
-    printf("Defensor: %s (%s, %d tropas)\n", defensor->nome, defensor->cor, defensor->tropas);
+    printf("--- Resultado ---\n");
+    printf("Atacante: %s (%s, %d)\n", atacante->ident, atacante->grupo, atacante->efetivo);
+    printf("Defensor: %s (%s, %d)\n", defensor->ident, defensor->grupo, defensor->efetivo);
 }
 
-// Função para liberar a memória alocada para os territórios
-void liberarMemoria(Territorio* mapa) {
+// Função para desalocar a memória
+void desalocar_memoria(Regiao* mapa, char* plano_jogador) {
     free(mapa);
-    printf("Memória liberada.\n");
+    if (plano_jogador != NULL) {
+        free(plano_jogador);
+    }
+    printf("Memoria liberada.\n");
+}
+
+// Função para definir o plano estratégico
+void definir_plano(char* destino, char* planos[], int total_planos) {
+    int indice = rand() % total_planos;
+    strcpy(destino, planos[indice]);
+}
+
+// Função para verificar o objetivo
+int verificar_objetivo(char* plano, Regiao* mapa, int extensao) {
+    // Lógica de exemplo
+    if (strcmp(plano, "Acumular mais de 25 soldados em uma regiao.") == 0) {
+        for (int i = 0; i < extensao; i++) {
+            if (mapa[i].efetivo > 25) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    else if (strcmp(plano, "Aniquilar todas as forcas do grupo verde.") == 0) {
+        int forcas_verdes_encontradas = 0;
+        for (int i = 0; i < extensao; i++) {
+            if (strcmp(mapa[i].grupo, "verde") == 0) {
+                forcas_verdes_encontradas++;
+            }
+        }
+        if(forcas_verdes_encontradas == 0) return 1;
+        else return 0;
+
+    }
+    else if (strcmp(plano, "Conquistar 6 regioes distintas.") == 0) {
+        int territoriosConquistados = 0;
+        for (int i = 0; i < extensao; i++) {
+            territoriosConquistados++;
+        }
+        if(territoriosConquistados == 6) return 1;
+        else return 0;
+
+    }
+    
+    else if (strcmp(plano, "Controlar um ponto chave por 4 rodadas.") == 0) {
+        //implementar a lógica de contar os turnos
+    }
+
+    return 0;
 }
